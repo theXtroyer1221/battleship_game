@@ -32,9 +32,9 @@ player1_ships_destroyed = 0
 player2_ships_destroyed = 0
 
 # Antal skepp för varje spelare
-NUM_SHIPS = 5
+NUM_SHIPS = 2
 
-#SHIPS = ["jollar": 2, "briggar": 3, "galärer": 4, "fullriggare": 5]
+# SHIPS = ["jollar": 2, "briggar": 3, "galärer": 4, "fullriggare": 5]
 
 # bilder init
 fire = pygame.transform.scale(
@@ -51,6 +51,7 @@ win_sound = pygame.mixer.Sound('win.wav')
 
 intro_sound.play()
 
+
 def draw_grid():
     # horisontella linjerna
     for row in range(ROWS):
@@ -63,21 +64,9 @@ def draw_grid():
                          (column*CELL_SIZE+MARGIN, ROWS*CELL_SIZE+MARGIN))
 
 
-def draw_ship(row, column, player):
-    # beräkna vänstra hörnet av cellen
-    x = column * (CELL_SIZE + MARGIN) + MARGIN
-    y = row * (CELL_SIZE + MARGIN) + MARGIN
-
-    if player == 1:
-        color = BLUE
-    else:
-        color = RED
-    pygame.draw.rect(screen, color, (x, y, CELL_SIZE, CELL_SIZE))
-    
-def draw_ship_new(coordinates, player):
-    #En loop för varje koordinat i skeppet. 
+def draw_ship(coordinates, player):
+    # En loop för varje koordinat i skeppet.
     for coordinate in coordinates:
-        print(coordinate)
         row, column = coordinate[0], coordinate[1]
         # beräkna vänstra hörnet av cellen
         x = column * (CELL_SIZE + MARGIN) + MARGIN
@@ -89,6 +78,7 @@ def draw_ship_new(coordinates, player):
             color = RED
         pygame.draw.rect(screen, color, (x, y, CELL_SIZE, CELL_SIZE))
 
+
 def place_ships():
     cube_image = None  # The image of the cube
     cube_x = None  # The x-coordinate of the cube
@@ -99,10 +89,10 @@ def place_ships():
 
     # Set the ship placement mode
     placing_ships = True
-    
+
     # Anger om skeppet är horisontell eller vertikal, spelaren kan vända på skeppet genom att variabeln ändras med en inline funktion eller lambda som ändrar värdet på variabeln från  till 90 och vice versa
     rotation = 0
-    rotate = lambda r: 0 if r == 90 else r + 90
+    def rotate(r): return 0 if r == 90 else r + 90
 
     while placing_ships:
         # beräkna cellen som musen klickade
@@ -117,14 +107,14 @@ def place_ships():
         if rotation == 0:
             cube_image = pygame.Surface((CELL_SIZE, CELL_SIZE*2))
         else:
-            cube_image = pygame.Surface((CELL_SIZE*2, CELL_SIZE))            
+            cube_image = pygame.Surface((CELL_SIZE*2, CELL_SIZE))
         if current_player == 1:
             cube_image.fill(BLUE)
         else:
             cube_image.fill(RED)
         cube_image.set_alpha(cube_alpha)
         cube_x, cube_y = column * CELL_SIZE, row * CELL_SIZE
-        
+
         # pygame event för att fånga mus händelser
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -134,13 +124,21 @@ def place_ships():
                 if (row, column) not in player1_ships and (row, column) not in player2_ships:
                     ship_sound.play()
                     # placera skepperna
-                    if current_player == 1:
-                        if rotation == 0:
-                            player1_ships.append( ( (row, column), (row+1, column) ) )
+                    if rotation == 0:
+                        if current_player == 1:
+                            player1_ships.append(
+                                [[row, column], [row+1, column]])
                         else:
-                            player1_ships.append( ((row, column), (row, column+1)) )
+                            player2_ships.append(
+                                [[row, column], [row+1, column]])
                     else:
-                        player2_ships.append((row, column))
+                        if current_player == 1:
+                            player1_ships.append(
+                                [[row, column], [row, column+1]])
+                        else:
+                            player2_ships.append(
+                                [[row, column], [row, column+1]])
+
                     # byt till nästa spelare
                     current_player = 3 - current_player
                 else:
@@ -160,11 +158,9 @@ def place_ships():
         screen.blit(cube_image, (cube_x, cube_y))
         # Vi behöver rita om skepperna för varje spelomgång så att endast kvarliggande skepper visas
         for ship in player1_ships:
-            #draw_ship(ship[0], ship[1], 1)
-            print(ship)
-            draw_ship_new(ship, 1)
+            draw_ship(ship, 1)
         for ship in player2_ships:
-            draw_ship(ship[0], ship[1], 2)
+            draw_ship(ship, 2)
 
         # updtaera skärmen efter varje omritning
         pygame.display.update()
@@ -186,32 +182,49 @@ playing = True
 game_state = [[0 for column in range(COLUMNS)] for row in range(ROWS)]
 
 
-def attack_cell(game_state, player, row, column):
+def attack_cell(game_state, ships, row, column):
     global player1_ships_destroyed, player2_ships_destroyed
     # kontrollera om cellen har redan varit attackerad
     if game_state[row][column] != 0:
         return "invalid"
 
-    # Kontrollera om ett skepp har slagits
-    if player == 1 and (row, column) in player2_ships:
-        player2_ships.remove((row, column))
-        player2_ships_destroyed += 1
-        # cellen som blir attackerad ges värdet 1
-        game_state[row][column] = 1
-        return "hit"
-    elif player == 2 and (row, column) in player1_ships:
-        player1_ships.remove((row, column))
-        player1_ships_destroyed += 1
-        game_state[row][column] = 1
-        return "hit"
-    # ff dvs. friendly fire
-    elif player == 1 and (row, column) in player1_ships:
-        return "ff"
-    elif player == 2 and (row, column) in player2_ships:
-        return "ff"
-    else:
-        game_state[row][column] = -1
-        return "miss"
+    for ship in ships:
+        print(ship)
+        print([row, column])
+        if [row, column] in ship:
+            print("hey")
+            # ship.remove([row, column])
+            game_state[row][column] = 1
+            return "hit"
+        else:
+            return "miss"
+
+    # # Kontrollera om ett skepp har slagits
+    # if player == 1:
+    #     for ship in player2_ships:
+    #         print([row, column])
+    #         if [row, column] in ship:
+    #             ship.remove([row, column])
+    #             player2_ships_destroyed += 1
+    #             # cellen som blir attackerad ges värdet 1
+    #             game_state[row][column] = 1
+    #             return "hit"
+    #         elif player == 2 and [row, column] in ship:
+    #             # ff dvs. friendly fire
+    #             return "ff"
+    #         else:
+    #             return "miss"
+
+    # for ship in player1_ships:
+    #     if player == 2 and [row, column] in ship:
+    #         player1_ships.remove([row, column])
+    #         player1_ships_destroyed += 1
+    #         game_state[row][column] = 1
+    #         return "hit"
+    #     elif player == 1 and [row, column] in ship:
+    #         return "ff"
+    #     else:
+    #         return "miss"
 
 
 def check_win(game_state, current_player):
@@ -263,7 +276,8 @@ while playing:
 
             # Attackera cellen
             attack_result = attack_cell(
-                game_state, current_player, row, column)
+                game_state, player2_ships if current_player == 1 else player1_ships, row, column)
+            print(attack_result)
 
             # Rita om efter attacken
             screen.fill(WHITE)
@@ -278,9 +292,9 @@ while playing:
                             fire, (j * CELL_SIZE, i * CELL_SIZE))
 
             for ship in player1_ships:
-                draw_ship(ship[0], ship[1], 1)
+                draw_ship(ship, 1)
             for ship in player2_ships:
-                draw_ship(ship[0], ship[1], 2)
+                draw_ship(ship, 2)
 
             # Visa spelarnas namn, färg och information om spelet
             font = pygame.font.Font(None, 16)
