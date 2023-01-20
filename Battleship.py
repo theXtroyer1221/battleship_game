@@ -34,6 +34,8 @@ player2_ships_destroyed = 0
 # Antal skepp för varje spelare
 NUM_SHIPS = 5
 
+#SHIPS = ["jollar": 2, "briggar": 3, "galärer": 4, "fullriggare": 5]
+
 # bilder init
 fire = pygame.transform.scale(
     pygame.image.load("fireball.gif"), (CELL_SIZE, CELL_SIZE))
@@ -48,7 +50,6 @@ splash_sound = pygame.mixer.Sound('splash.wav')
 win_sound = pygame.mixer.Sound('win.wav')
 
 intro_sound.play()
-
 
 def draw_grid():
     # horisontella linjerna
@@ -72,7 +73,21 @@ def draw_ship(row, column, player):
     else:
         color = RED
     pygame.draw.rect(screen, color, (x, y, CELL_SIZE, CELL_SIZE))
+    
+def draw_ship_new(coordinates, player):
+    #En loop för varje koordinat i skeppet. 
+    for coordinate in coordinates:
+        print(coordinate)
+        row, column = coordinate[0], coordinate[1]
+        # beräkna vänstra hörnet av cellen
+        x = column * (CELL_SIZE + MARGIN) + MARGIN
+        y = row * (CELL_SIZE + MARGIN) + MARGIN
 
+        if player == 1:
+            color = BLUE
+        else:
+            color = RED
+        pygame.draw.rect(screen, color, (x, y, CELL_SIZE, CELL_SIZE))
 
 def place_ships():
     cube_image = None  # The image of the cube
@@ -84,6 +99,10 @@ def place_ships():
 
     # Set the ship placement mode
     placing_ships = True
+    
+    # Anger om skeppet är horisontell eller vertikal, spelaren kan vända på skeppet genom att variabeln ändras med en inline funktion eller lambda som ändrar värdet på variabeln från  till 90 och vice versa
+    rotation = 0
+    rotate = lambda r: 0 if r == 90 else r + 90
 
     while placing_ships:
         # beräkna cellen som musen klickade
@@ -94,18 +113,18 @@ def place_ships():
         x = column * (CELL_SIZE + MARGIN) + MARGIN
         y = row * (CELL_SIZE + MARGIN) + MARGIN
 
-        # if cube_image is None:
-        cube_image = pygame.Surface((CELL_SIZE, CELL_SIZE))
-        # Fill the image with a red color
-        print(current_player)
+        # Delen av kode om cube_image är för att skapa en "ghost" som visar visuellt vart skeppet kommer att placeras"
+        if rotation == 0:
+            cube_image = pygame.Surface((CELL_SIZE, CELL_SIZE*2))
+        else:
+            cube_image = pygame.Surface((CELL_SIZE*2, CELL_SIZE))            
         if current_player == 1:
             cube_image.fill(BLUE)
         else:
             cube_image.fill(RED)
-        # Set the transparency of the image
         cube_image.set_alpha(cube_alpha)
-
         cube_x, cube_y = column * CELL_SIZE, row * CELL_SIZE
+        
         # pygame event för att fånga mus händelser
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -116,13 +135,19 @@ def place_ships():
                     ship_sound.play()
                     # placera skepperna
                     if current_player == 1:
-                        player1_ships.append((row, column))
+                        if rotation == 0:
+                            player1_ships.append( ( (row, column), (row+1, column) ) )
+                        else:
+                            player1_ships.append( ((row, column), (row, column+1)) )
                     else:
                         player2_ships.append((row, column))
                     # byt till nästa spelare
                     current_player = 3 - current_player
                 else:
                     shoot_sound.play()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_r:
+                    rotation = rotate(rotation)
 
             # om båda spelare har placerad alla sina skepp, avsluta förbredningsperioden och starta spelet
             if len(player1_ships) == NUM_SHIPS and len(player2_ships) == NUM_SHIPS:
@@ -135,7 +160,9 @@ def place_ships():
         screen.blit(cube_image, (cube_x, cube_y))
         # Vi behöver rita om skepperna för varje spelomgång så att endast kvarliggande skepper visas
         for ship in player1_ships:
-            draw_ship(ship[0], ship[1], 1)
+            #draw_ship(ship[0], ship[1], 1)
+            print(ship)
+            draw_ship_new(ship, 1)
         for ship in player2_ships:
             draw_ship(ship[0], ship[1], 2)
 
