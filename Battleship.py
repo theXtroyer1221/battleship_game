@@ -1,5 +1,7 @@
 import sys
 import pygame
+import random
+import time
 
 pygame.init()
 
@@ -33,8 +35,12 @@ player2_ships_destroyed = 0
 
 # Antal skepp för varje spelare
 NUM_SHIPS = 2
+SHIP_SIZE = 2
 
-# SHIPS = ["jollar": 2, "briggar": 3, "galärer": 4, "fullriggare": 5]
+dropdown = pygame.Rect(10, 10, 100, 20)  # x, y, width, height
+dropdown_options = ['jollar', 'briggar', 'galärer', 'fullriggare']
+font = pygame.font.Font(pygame.font.match_font('bitstreamverasans'), 16)
+
 
 # bilder init
 fire = pygame.transform.scale(
@@ -80,6 +86,7 @@ def draw_ship(coordinates, player):
 
 
 def place_ships():
+    global SHIP_SIZE
     cube_image = None  # The image of the cube
     cube_x = None  # The x-coordinate of the cube
     cube_y = None  # The y-coordinate of the cube
@@ -89,6 +96,7 @@ def place_ships():
 
     # Set the ship placement mode
     placing_ships = True
+    dropdown_open = False
 
     # Anger om skeppet är horisontell eller vertikal, spelaren kan vända på skeppet genom att variabeln ändras med en inline funktion eller lambda som ändrar värdet på variabeln från  till 90 och vice versa
     rotation = 0
@@ -105,14 +113,15 @@ def place_ships():
 
         # Delen av kode om cube_image är för att skapa en "ghost" som visar visuellt vart skeppet kommer att placeras"
         if rotation == 0:
-            cube_image = pygame.Surface((CELL_SIZE, CELL_SIZE*2))
+            cube_image = pygame.Surface((CELL_SIZE, CELL_SIZE*SHIP_SIZE))
         else:
-            cube_image = pygame.Surface((CELL_SIZE*2, CELL_SIZE))
+            cube_image = pygame.Surface((CELL_SIZE*SHIP_SIZE, CELL_SIZE))
         if current_player == 1:
             cube_image.fill(BLUE)
         else:
             cube_image.fill(RED)
         cube_image.set_alpha(cube_alpha)
+        # if column * CELL_SIZE < column * CELL_SIZE * 10:
         cube_x, cube_y = column * CELL_SIZE, row * CELL_SIZE
 
         # pygame event för att fånga mus händelser
@@ -121,23 +130,35 @@ def place_ships():
                 pygame.quit()
                 sys.exit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if (row, column) not in player1_ships and (row, column) not in player2_ships:
+                if dropdown.collidepoint(event.pos):
+                    # Open the dropdown menu
+                    dropdown_open = True
+                elif dropdown_open:
+                    # Check if user clicked on an option in the dropdown menu
+                    for i, option in enumerate(dropdown_options):
+                        rect = pygame.Rect(dropdown.x, dropdown.y +
+                                           ((i + 1) * 30), dropdown.width, 30)
+                        if rect.collidepoint(event.pos):
+                            SHIP_SIZE = i + 1  # The index of the option selected
+                            dropdown_open = False
+                            print(f'Selected ship size: {SHIP_SIZE}')
+                            break
+
+                elif (row, column) not in player1_ships and (row, column) not in player2_ships:
                     ship_sound.play()
-                    # placera skepperna
+                    # placera skepperna, unit är en tillfällig lista för att samla alla skepp delar i en och samma
+                    unit = []
                     if rotation == 0:
-                        if current_player == 1:
-                            player1_ships.append(
-                                [[row, column], [row+1, column]])
-                        else:
-                            player2_ships.append(
-                                [[row, column], [row+1, column]])
+                        for _ in range(SHIP_SIZE):
+                            unit.append([row+_, column])
                     else:
-                        if current_player == 1:
-                            player1_ships.append(
-                                [[row, column], [row, column+1]])
-                        else:
-                            player2_ships.append(
-                                [[row, column], [row, column+1]])
+                        for _ in range(SHIP_SIZE):
+                            unit.append([row, column+_])
+
+                    if current_player == 1:
+                        player1_ships.append(unit)
+                    else:
+                        player2_ships.append(unit)
 
                     # byt till nästa spelare
                     current_player = 3 - current_player
@@ -161,7 +182,22 @@ def place_ships():
             draw_ship(ship, 1)
         for ship in player2_ships:
             draw_ship(ship, 2)
-
+        # Rita dropdown för att välja skepp typ
+        pygame.draw.rect(screen, WHITE, dropdown)
+        pygame.draw.rect(screen, BLACK, dropdown,
+                         1)  # svart ram
+        if dropdown_open:
+            for i, option in enumerate(dropdown_options):
+                rect = pygame.Rect(dropdown.x, dropdown.y +
+                                   ((i + 1) * 30), dropdown.width, 30)
+                pygame.draw.rect(screen, WHITE, rect)
+                pygame.draw.rect(screen, BLACK, rect, 1)
+                text = font.render(option, True, BLACK)
+                screen.blit(text, (rect.x + 5, rect.y+7))
+        else:
+            text = font.render(
+                dropdown_options[SHIP_SIZE - 1] + " \u2193", True, BLACK)
+            screen.blit(text, (dropdown.x + 5, dropdown.y))
         # updtaera skärmen efter varje omritning
         pygame.display.update()
         # spelets 'timeframe'
@@ -201,7 +237,69 @@ def attack_cell(current_player, game_state, ships, row, column):
                 player1_ships_destroyed += 1
                 ships.remove(ship)
             break
-    return result
+
+    screen.fill(WHITE)
+    draw_grid()
+
+    # Rita eld för att indikera en attackerad cell från föregående turer
+    # variablerna i (column) och j(row) talar om vilken ruta som trycks, men för att uttrycka det i pygames koordinatsystem gångrar vi med rutstorleken. Ex. om explosionen är vid rad 4, då är det  y koordinaten 4 * 50 = 200
+    for i in range(COLUMNS):
+        for j in range(ROWS):
+            if game_state[i][j] == 1:
+                screen.blit(
+                    fire, (j * CELL_SIZE, i * CELL_SIZE))
+
+    for ship in player1_ships:
+        draw_ship(ship, 1)
+    for ship in player2_ships:
+        draw_ship(ship, 2)
+
+    # Visa spelarnas namn, färg och information om spelet, samt nästa spelares tur
+    font = pygame.font.Font(None, 16)
+    if current_player == 1:
+        text = font.render(
+            f"Computers's turn", True, RED)
+        screen.blit(text, (WINDOW_SIZE[0] - 120, 10))
+    else:
+        text = font.render(
+            f"player 1's turn", True, BLUE)
+        screen.blit(text, (WINDOW_SIZE[0] - 80, 10))
+
+    text = font.render("Player", True, BLUE)  # Blue
+    screen.blit(text, (10, WINDOW_SIZE[1] - 50))
+    text = font.render(
+        f"Ships remaining: {NUM_SHIPS - player1_ships_destroyed}", True, BLUE)
+    screen.blit(text, (10, WINDOW_SIZE[1] - 25))
+    text = font.render(
+        f"Ships destroyed: {player2_ships_destroyed}", True, BLUE)
+    screen.blit(text, (10, WINDOW_SIZE[1] - 10))
+
+    # Spelare 2
+    text = font.render("Computer", True, RED)  # Red
+    screen.blit(text, (WINDOW_SIZE[0] - 200, WINDOW_SIZE[1] - 50))
+    text = font.render(
+        f"Ships remaining: {NUM_SHIPS - player2_ships_destroyed}", True, RED)
+    screen.blit(text, (WINDOW_SIZE[0] - 200, WINDOW_SIZE[1] - 25))
+    text = font.render(
+        f"Ships destroyed: {player1_ships_destroyed}", True, RED)
+    screen.blit(text, (WINDOW_SIZE[0] - 200, WINDOW_SIZE[1] - 10))
+
+    # Notera resultatet av attacken
+    font = pygame.font.Font(None, 36)
+    if result == "hit":
+        text = font.render(
+            f"Player {current_player} hits a ship!", True, BLACK)
+        sink_sound.play()
+    elif result == "miss":
+        text = font.render(
+            f"Player {current_player} misses!", True, BLACK)
+        splash_sound.play()
+    elif result == "invalid":
+        text = font.render(
+            f"Player {current_player}, Invalid attack!", True, BLACK)
+    screen.blit(text, (10, 10))
+
+    pygame.display.update()
 
 
 def check_win(game_state, current_player):
@@ -253,70 +351,23 @@ while playing:
 
             # Attackera cellen
             attack_result = attack_cell(current_player,
-                                        game_state, player2_ships if current_player == 1 else player1_ships, row, column)
-
-            # Rita om efter attacken
-            screen.fill(WHITE)
-            draw_grid()
-
-            # Rita eld för att indikera en attackerad cell från föregående turer
-            # variablerna i (column) och j(row) talar om vilken ruta som trycks, men för att uttrycka det i pygames koordinatsystem gångrar vi med rutstorleken. Ex. om explosionen är vid rad 4, då är det  y koordinaten 4 * 50 = 200
-            for i in range(COLUMNS):
-                for j in range(ROWS):
-                    if game_state[i][j] == 1:
-                        screen.blit(
-                            fire, (j * CELL_SIZE, i * CELL_SIZE))
-
-            for ship in player1_ships:
-                draw_ship(ship, 1)
-            for ship in player2_ships:
-                draw_ship(ship, 2)
-
-            # Visa spelarnas namn, färg och information om spelet
-            font = pygame.font.Font(None, 16)
-            # Spelare 1
-            current_player_color = RED if current_player == 1 else BLUE
-            text = font.render(
-                f"player {3 - current_player}'s turn", True, current_player_color)
-            screen.blit(text, (WINDOW_SIZE[0] - 80, 10))
-
-            text = font.render("Player 1", True, BLUE)  # Blue
-            screen.blit(text, (10, WINDOW_SIZE[1] - 50))
-            text = font.render(
-                f"Ships remaining: {NUM_SHIPS - player1_ships_destroyed}", True, BLUE)
-            screen.blit(text, (10, WINDOW_SIZE[1] - 25))
-            text = font.render(
-                f"Ships destroyed: {player2_ships_destroyed}", True, BLUE)
-            screen.blit(text, (10, WINDOW_SIZE[1] - 10))
-
-            # Spelare 2
-            text = font.render("Player 2", True, RED)  # Red
-            screen.blit(text, (WINDOW_SIZE[0] - 200, WINDOW_SIZE[1] - 50))
-            text = font.render(
-                f"Ships remaining: {NUM_SHIPS - player2_ships_destroyed}", True, RED)
-            screen.blit(text, (WINDOW_SIZE[0] - 200, WINDOW_SIZE[1] - 25))
-            text = font.render(
-                f"Ships destroyed: {player1_ships_destroyed}", True, RED)
-            screen.blit(text, (WINDOW_SIZE[0] - 200, WINDOW_SIZE[1] - 10))
-
-            # Notera resultatet av attacken
-            font = pygame.font.Font(None, 36)
-            if attack_result == "hit":
-                text = font.render(
-                    f"Player {current_player} hits a ship!", True, BLACK)
-                sink_sound.play()
-            elif attack_result == "miss":
-                text = font.render(
-                    f"Player {current_player} misses!", True, BLACK)
-                splash_sound.play()
-            elif attack_result == "invalid":
-                text = font.render(
-                    f"Player {current_player}, Invalid attack!", True, BLACK)
-            screen.blit(text, (10, 10))
-
-            pygame.display.update()
+                                        game_state, player2_ships, row, column)
 
             current_player = 3 - current_player
+
+            # Datorns tur att köra, använd random för att slumpmässsigt välja attack koordinat
+            font = pygame.font.Font(None, 24)
+            text = font.render(
+                "Computer player's turn, please wait...", True, BLACK)
+            screen.blit(text, (10, WINDOW_SIZE[1]))
+            pygame.display.update()
+            pygame.time.wait(1200)
+
+            row = random.randint(0, ROWS - 1)
+            column = random.randint(0, COLUMNS - 1)
+            attack_result = attack_cell(
+                current_player, game_state, player1_ships, row, column)
+            print(attack_result, [row, column])
 
             # Kontrollera om någon har vunnit
             check_win(game_state, current_player)
