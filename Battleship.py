@@ -182,49 +182,26 @@ playing = True
 game_state = [[0 for column in range(COLUMNS)] for row in range(ROWS)]
 
 
-def attack_cell(game_state, ships, row, column):
+def attack_cell(current_player, game_state, ships, row, column):
     global player1_ships_destroyed, player2_ships_destroyed
     # kontrollera om cellen har redan varit attackerad
     if game_state[row][column] != 0:
         return "invalid"
 
+    result = "miss"
     for ship in ships:
-        print(ship)
-        print([row, column])
         if [row, column] in ship:
-            print("hey")
-            # ship.remove([row, column])
+            ship.remove([row, column])
             game_state[row][column] = 1
-            return "hit"
-        else:
-            return "miss"
-
-    # # Kontrollera om ett skepp har slagits
-    # if player == 1:
-    #     for ship in player2_ships:
-    #         print([row, column])
-    #         if [row, column] in ship:
-    #             ship.remove([row, column])
-    #             player2_ships_destroyed += 1
-    #             # cellen som blir attackerad ges värdet 1
-    #             game_state[row][column] = 1
-    #             return "hit"
-    #         elif player == 2 and [row, column] in ship:
-    #             # ff dvs. friendly fire
-    #             return "ff"
-    #         else:
-    #             return "miss"
-
-    # for ship in player1_ships:
-    #     if player == 2 and [row, column] in ship:
-    #         player1_ships.remove([row, column])
-    #         player1_ships_destroyed += 1
-    #         game_state[row][column] = 1
-    #         return "hit"
-    #     elif player == 1 and [row, column] in ship:
-    #         return "ff"
-    #     else:
-    #         return "miss"
+            result = "hit"
+            if current_player == 1 and not ship:
+                player2_ships_destroyed += 1
+                ships.remove(ship)
+            elif current_player == 2 and not ship:
+                player1_ships_destroyed += 1
+                ships.remove(ship)
+            break
+    return result
 
 
 def check_win(game_state, current_player):
@@ -234,9 +211,9 @@ def check_win(game_state, current_player):
         draw_grid()
 
         for ship in player1_ships:
-            draw_ship(ship[0], ship[1], 1)
+            draw_ship(ship, 1)
         for ship in player2_ships:
-            draw_ship(ship[0], ship[1], 2)
+            draw_ship(ship, 2)
         font = pygame.font.Font(None, 36)
         text = font.render(
             "Player 2 wins! Press any key to exit...", True, BLACK)
@@ -250,9 +227,9 @@ def check_win(game_state, current_player):
         draw_grid()
 
         for ship in player1_ships:
-            draw_ship(ship[0], ship[1], 1)
+            draw_ship(ship, 1)
         for ship in player2_ships:
-            draw_ship(ship[0], ship[1], 2)
+            draw_ship(ship, 2)
         font = pygame.font.Font(None, 36)
         text = font.render(
             "Player 1 wins! Press any key to exit...", True, BLACK)
@@ -275,9 +252,8 @@ while playing:
             row = mouse_y // (CELL_SIZE + MARGIN)
 
             # Attackera cellen
-            attack_result = attack_cell(
-                game_state, player2_ships if current_player == 1 else player1_ships, row, column)
-            print(attack_result)
+            attack_result = attack_cell(current_player,
+                                        game_state, player2_ships if current_player == 1 else player1_ships, row, column)
 
             # Rita om efter attacken
             screen.fill(WHITE)
@@ -333,9 +309,9 @@ while playing:
                 text = font.render(
                     f"Player {current_player} misses!", True, BLACK)
                 splash_sound.play()
-            elif attack_result == "ff":
+            elif attack_result == "invalid":
                 text = font.render(
-                    f"Player {current_player}, friendly fire!", True, BLACK)
+                    f"Player {current_player}, Invalid attack!", True, BLACK)
             screen.blit(text, (10, 10))
 
             pygame.display.update()
