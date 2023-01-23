@@ -70,7 +70,7 @@ def draw_grid():
                          (column*CELL_SIZE+MARGIN, ROWS*CELL_SIZE+MARGIN))
 
 
-def draw_ship(coordinates, player):
+def draw_ship(coordinates, player, shaded):
     # En loop för varje koordinat i skeppet.
     for coordinate in coordinates:
         row, column = coordinate[0], coordinate[1]
@@ -79,10 +79,14 @@ def draw_ship(coordinates, player):
         y = row * (CELL_SIZE + MARGIN) + MARGIN
 
         if player == 1:
-            color = BLUE
+            color = BLUE               
         else:
             color = RED
-        pygame.draw.rect(screen, color, (x, y, CELL_SIZE, CELL_SIZE))
+        ship_part = pygame.Surface((CELL_SIZE, CELL_SIZE))
+        ship_part.fill(color)
+        if shaded == True:
+            ship_part.set_alpha(60)
+        screen.blit(ship_part, (x,y))
 
 
 def place_ships():
@@ -121,7 +125,7 @@ def place_ships():
         else:
             cube_image.fill(RED)
         cube_image.set_alpha(cube_alpha)
-        # if column * CELL_SIZE < column * CELL_SIZE * 10:
+        
         cube_x, cube_y = column * CELL_SIZE, row * CELL_SIZE
 
         # pygame event för att fånga mus händelser
@@ -191,9 +195,9 @@ def place_ships():
         screen.blit(cube_image, (cube_x, cube_y))
         # Vi behöver rita om skepperna för varje spelomgång så att endast kvarliggande skepper visas
         for ship in player1_ships:
-            draw_ship(ship, 1)
+            draw_ship(ship, 1, False)
         for ship in player2_ships:
-            draw_ship(ship, 2)
+            draw_ship(ship, 2, False)
         # Rita dropdown för att välja skepp typ
         pygame.draw.rect(screen, WHITE, dropdown)
         pygame.draw.rect(screen, BLACK, dropdown,
@@ -262,9 +266,9 @@ def attack_cell(current_player, game_state, ships, row, column):
                     fire, (j * CELL_SIZE, i * CELL_SIZE))
 
     for ship in player1_ships:
-        draw_ship(ship, 1)
-    for ship in player2_ships:
-        draw_ship(ship, 2)
+        draw_ship(ship, 1, True)
+#     for ship in player2_ships:
+#         draw_ship(ship, 2)
 
     # Visa spelarnas namn, färg och information om spelet, samt nästa spelares tur
     font = pygame.font.Font(None, 16)
@@ -337,9 +341,9 @@ def check_win(game_state, current_player):
         draw_grid()
 
         for ship in player1_ships:
-            draw_ship(ship, 1)
+            draw_ship(ship, 1, False)
         for ship in player2_ships:
-            draw_ship(ship, 2)
+            draw_ship(ship, 2, False)
         font = pygame.font.Font(None, 36)
         text = font.render(
             "Player 1 wins! Press any key to exit...", True, BLACK)
@@ -348,43 +352,82 @@ def check_win(game_state, current_player):
         pygame.display.update()
 
 
+# while playing:
+#     for event in pygame.event.get():
+#         if event.type == pygame.QUIT:
+#             pygame.quit()
+#             sys.exit()
+#         elif event.type == pygame.MOUSEBUTTONDOWN:
+#             shoot_sound.play()
+#             # mus position
+#             mouse_x, mouse_y = pygame.mouse.get_pos()
+# 
+#             column = mouse_x // (CELL_SIZE + MARGIN)
+#             row = mouse_y // (CELL_SIZE + MARGIN)
+# 
+#             # Attackera cellen
+#             attack_result = attack_cell(current_player,
+#                                         game_state, player2_ships, row, column)
+# 
+#             current_player = 3 - current_player
+# 
+#             # Datorns tur att köra, använd random för att slumpmässsigt välja attack koordinat
+#             font = pygame.font.Font(None, 24)
+#             text = font.render(
+#                 "Computer player's turn, please wait...", True, BLACK)
+#             screen.blit(text, (10, WINDOW_SIZE[1]))
+#             pygame.display.update()
+#             pygame.time.wait(1200)
+# 
+#             row = random.randint(0, ROWS - 1)
+#             column = random.randint(0, COLUMNS - 1)
+#             attack_result = attack_cell(
+#                 current_player, game_state, player1_ships, row, column)
+#             print(attack_result, [row, column])
+# 
+#             # Kontrollera om någon har vunnit
+#             check_win(game_state, current_player)
+# 
+#         # Slutligen kontrollera om någon spelare har förlorat
+#         keys = pygame.key.get_pressed()
+#         if any(keys):
+#             # If any key is being pressed, exit the program
+#             pygame.quit()
+#             sys.exit()
+
 while playing:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            shoot_sound.play()
-            # mus position
-            mouse_x, mouse_y = pygame.mouse.get_pos()
+        shoot_sound.play()
 
-            column = mouse_x // (CELL_SIZE + MARGIN)
-            row = mouse_y // (CELL_SIZE + MARGIN)
+        row = random.randint(0, ROWS - 1)
+        column = random.randint(0, COLUMNS - 1)
+        attack_result = attack_cell(current_player,
+                                    game_state, player2_ships, row, column)
+        print(attack_result, [row, column])
 
-            # Attackera cellen
-            attack_result = attack_cell(current_player,
-                                        game_state, player2_ships, row, column)
+        current_player = 3 - current_player
 
-            current_player = 3 - current_player
+        # Datorns tur att köra, använd random för att slumpmässsigt välja attack koordinat
+        font = pygame.font.Font(None, 24)
+        text = font.render(
+            "Computer player's turn, please wait...", True, BLACK)
+        screen.blit(text, (10, WINDOW_SIZE[1]))
+        pygame.display.update()
+        pygame.time.wait(120)
 
-            # Datorns tur att köra, använd random för att slumpmässsigt välja attack koordinat
-            font = pygame.font.Font(None, 24)
-            text = font.render(
-                "Computer player's turn, please wait...", True, BLACK)
-            screen.blit(text, (10, WINDOW_SIZE[1]))
-            pygame.display.update()
-            pygame.time.wait(1200)
+        row = random.randint(0, ROWS - 1)
+        column = random.randint(0, COLUMNS - 1)
+        attack_result = attack_cell(
+            current_player, game_state, player1_ships, row, column)
+        print(attack_result, [row, column])
 
-            row = random.randint(0, ROWS - 1)
-            column = random.randint(0, COLUMNS - 1)
-            attack_result = attack_cell(
-                current_player, game_state, player1_ships, row, column)
-            print(attack_result, [row, column])
+        # Kontrollera om någon har vunnit
+        check_win(game_state, current_player)
 
-            # Kontrollera om någon har vunnit
-            check_win(game_state, current_player)
-
-        # Slutligen kontrollera om någon spelare har förlorat
+        # Slutligen avsluta körningen när spelarna väljer det
         keys = pygame.key.get_pressed()
         if any(keys):
             # If any key is being pressed, exit the program
