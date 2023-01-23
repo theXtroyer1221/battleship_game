@@ -139,26 +139,38 @@ def place_ships():
                         rect = pygame.Rect(dropdown.x, dropdown.y +
                                            ((i + 1) * 30), dropdown.width, 30)
                         if rect.collidepoint(event.pos):
-                            SHIP_SIZE = i + 1  # The index of the option selected
+                            SHIP_SIZE = i + 2  # The index of the option selected
                             dropdown_open = False
                             print(f'Selected ship size: {SHIP_SIZE}')
                             break
 
                 elif (row, column) not in player1_ships and (row, column) not in player2_ships:
-                    ship_sound.play()
+                    place = True
                     # placera skepperna, unit är en tillfällig lista för att samla alla skepp delar i en och samma
                     unit = []
                     if rotation == 0:
-                        for _ in range(SHIP_SIZE):
-                            unit.append([row+_, column])
+                        if row + SHIP_SIZE <= ROWS and column + 1 <= COLUMNS:
+                            for _ in range(SHIP_SIZE):
+                                unit.append([row+_, column])
+                        else:
+                            place = False
+                            print("invalid placment")
+                            shoot_sound.play()
                     else:
-                        for _ in range(SHIP_SIZE):
-                            unit.append([row, column+_])
-
-                    if current_player == 1:
+                        if column + SHIP_SIZE <= COLUMNS and row + 1 <= ROWS:
+                            for _ in range(SHIP_SIZE):
+                                unit.append([row, column+_])
+                        else:
+                            place = False
+                            print("invalid placement")
+                            shoot_sound.play()
+                    
+                    if current_player == 1 and place == True:
                         player1_ships.append(unit)
-                    else:
+                        ship_sound.play()
+                    elif current_player == 2 and place == True:
                         player2_ships.append(unit)
+                        ship_sound.play()
 
                     # byt till nästa spelare
                     current_player = 3 - current_player
@@ -196,7 +208,7 @@ def place_ships():
                 screen.blit(text, (rect.x + 5, rect.y+7))
         else:
             text = font.render(
-                dropdown_options[SHIP_SIZE - 1] + " \u2193", True, BLACK)
+                dropdown_options[SHIP_SIZE - 2] + " \u2193", True, BLACK)
             screen.blit(text, (dropdown.x + 5, dropdown.y))
         # updtaera skärmen efter varje omritning
         pygame.display.update()
