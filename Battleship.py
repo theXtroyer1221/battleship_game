@@ -27,14 +27,14 @@ BLUE = (0, 0, 255)
 RED = (255, 0, 0)
 
 player1_ships = []
+player_1_ship_type = [4, 3, 3, 1]
 player2_ships = []
+player_2_ship_type = [4, 3, 3, 1]
 
 # antal skepp man har förlorat
 player1_ships_destroyed = 0
 player2_ships_destroyed = 0
 
-# Antal skepp för varje spelare
-NUM_SHIPS = 2
 SHIP_SIZE = 2
 
 dropdown = pygame.Rect(10, 10, 100, 20)  # x, y, width, height
@@ -79,14 +79,14 @@ def draw_ship(coordinates, player, shaded):
         y = row * (CELL_SIZE + MARGIN) + MARGIN
 
         if player == 1:
-            color = BLUE               
+            color = BLUE
         else:
             color = RED
         ship_part = pygame.Surface((CELL_SIZE, CELL_SIZE))
         ship_part.fill(color)
         if shaded == True:
             ship_part.set_alpha(60)
-        screen.blit(ship_part, (x,y))
+        screen.blit(ship_part, (x, y))
 
 
 def place_ships():
@@ -125,7 +125,7 @@ def place_ships():
         else:
             cube_image.fill(RED)
         cube_image.set_alpha(cube_alpha)
-        
+
         cube_x, cube_y = column * CELL_SIZE, row * CELL_SIZE
 
         # pygame event för att fånga mus händelser
@@ -147,6 +147,8 @@ def place_ships():
                             dropdown_open = False
                             print(f'Selected ship size: {SHIP_SIZE}')
                             break
+                        else:
+                            shoot_sound.play()
 
                 elif (row, column) not in player1_ships and (row, column) not in player2_ships:
                     place = True
@@ -168,13 +170,17 @@ def place_ships():
                             place = False
                             print("invalid placement")
                             shoot_sound.play()
-                    
-                    if current_player == 1 and place == True:
+
+                    if current_player == 1 and place == True and player_1_ship_type[len(unit)-2] != 0:
                         player1_ships.append(unit)
+                        player_1_ship_type[len(unit)-2] -= 1
                         ship_sound.play()
-                    elif current_player == 2 and place == True:
+                    elif current_player == 2 and place == True and player_2_ship_type[len(unit)-2] != 0:
                         player2_ships.append(unit)
+                        player_2_ship_type[len(unit)-2] -= 1
                         ship_sound.play()
+
+                    print(player_1_ship_type)
 
                     # byt till nästa spelare
                     current_player = 3 - current_player
@@ -185,7 +191,7 @@ def place_ships():
                     rotation = rotate(rotation)
 
             # om båda spelare har placerad alla sina skepp, avsluta förbredningsperioden och starta spelet
-            if len(player1_ships) == NUM_SHIPS and len(player2_ships) == NUM_SHIPS:
+            if sum(player_1_ship_type) == 0 and sum(player_2_ship_type) == 0:
                 placing_ships = False
                 start_sound.play()
 
@@ -208,7 +214,8 @@ def place_ships():
                                    ((i + 1) * 30), dropdown.width, 30)
                 pygame.draw.rect(screen, WHITE, rect)
                 pygame.draw.rect(screen, BLACK, rect, 1)
-                text = font.render(option, True, BLACK)
+                name = f"{option} {player_1_ship_type[i]}x" if current_player == 1 else f"{option} {player_2_ship_type[i]}x"
+                text = font.render(name, True, BLACK)
                 screen.blit(text, (rect.x + 5, rect.y+7))
         else:
             text = font.render(
@@ -284,7 +291,7 @@ def attack_cell(current_player, game_state, ships, row, column):
     text = font.render("Player", True, BLUE)  # Blue
     screen.blit(text, (10, WINDOW_SIZE[1] - 50))
     text = font.render(
-        f"Ships remaining: {NUM_SHIPS - player1_ships_destroyed}", True, BLUE)
+        f"Ships remaining: {sum(player_1_ship_type) - player1_ships_destroyed}", True, BLUE)
     screen.blit(text, (10, WINDOW_SIZE[1] - 25))
     text = font.render(
         f"Ships destroyed: {player2_ships_destroyed}", True, BLUE)
@@ -294,7 +301,7 @@ def attack_cell(current_player, game_state, ships, row, column):
     text = font.render("Computer", True, RED)  # Red
     screen.blit(text, (WINDOW_SIZE[0] - 200, WINDOW_SIZE[1] - 50))
     text = font.render(
-        f"Ships remaining: {NUM_SHIPS - player2_ships_destroyed}", True, RED)
+        f"Ships remaining: {sum(player_2_ship_type) - player2_ships_destroyed}", True, RED)
     screen.blit(text, (WINDOW_SIZE[0] - 200, WINDOW_SIZE[1] - 25))
     text = font.render(
         f"Ships destroyed: {player1_ships_destroyed}", True, RED)
@@ -361,16 +368,16 @@ def check_win(game_state, current_player):
 #             shoot_sound.play()
 #             # mus position
 #             mouse_x, mouse_y = pygame.mouse.get_pos()
-# 
+#
 #             column = mouse_x // (CELL_SIZE + MARGIN)
 #             row = mouse_y // (CELL_SIZE + MARGIN)
-# 
+#
 #             # Attackera cellen
 #             attack_result = attack_cell(current_player,
 #                                         game_state, player2_ships, row, column)
-# 
+#
 #             current_player = 3 - current_player
-# 
+#
 #             # Datorns tur att köra, använd random för att slumpmässsigt välja attack koordinat
 #             font = pygame.font.Font(None, 24)
 #             text = font.render(
@@ -378,16 +385,16 @@ def check_win(game_state, current_player):
 #             screen.blit(text, (10, WINDOW_SIZE[1]))
 #             pygame.display.update()
 #             pygame.time.wait(1200)
-# 
+#
 #             row = random.randint(0, ROWS - 1)
 #             column = random.randint(0, COLUMNS - 1)
 #             attack_result = attack_cell(
 #                 current_player, game_state, player1_ships, row, column)
 #             print(attack_result, [row, column])
-# 
+#
 #             # Kontrollera om någon har vunnit
 #             check_win(game_state, current_player)
-# 
+#
 #         # Slutligen kontrollera om någon spelare har förlorat
 #         keys = pygame.key.get_pressed()
 #         if any(keys):
