@@ -279,7 +279,7 @@ def attack_cell(current_player, game_state, ships, row, column):
     global player1_ships_destroyed, player2_ships_destroyed
     # kontrollera om cellen har redan varit attackerad
     if game_state[row][column] != 0:
-        return "invalid"
+        result = "invalid"
 
     result = "miss"
     for ship in ships:
@@ -323,7 +323,8 @@ def attack_cell(current_player, game_state, ships, row, column):
     text = font.render("Player", True, BLUE)  # Blue
     screen.blit(text, (10, WINDOW_SIZE[1] - 50))
     text = font.render(
-        f"Ships remaining: {sum(player_1_ship_type) - player1_ships_destroyed}", True, BLUE)
+        f"Ships remaining: {11 - player1_ships_destroyed}", True, BLUE)
+    print(player_1_ship_type, player1_ships_destroyed)
     screen.blit(text, (10, WINDOW_SIZE[1] - 25))
     text = font.render(
         f"Ships destroyed: {player2_ships_destroyed}", True, BLUE)
@@ -333,7 +334,7 @@ def attack_cell(current_player, game_state, ships, row, column):
     text = font.render("Computer", True, RED)  # Red
     screen.blit(text, (WINDOW_SIZE[0] - 200, WINDOW_SIZE[1] - 50))
     text = font.render(
-        f"Ships remaining: {sum(player_2_ship_type) - player2_ships_destroyed}", True, RED)
+        f"Ships remaining: {11 - player2_ships_destroyed}", True, RED)
     screen.blit(text, (WINDOW_SIZE[0] - 200, WINDOW_SIZE[1] - 25))
     text = font.render(
         f"Ships destroyed: {player1_ships_destroyed}", True, RED)
@@ -341,17 +342,22 @@ def attack_cell(current_player, game_state, ships, row, column):
 
     # Notera resultatet av attacken
     font = pygame.font.Font(None, 36)
+    if current_player == 1:
+        player = "Player"
+    else:
+        player = "Computer"
+        
     if result == "hit":
         text = font.render(
-            f"Player {current_player} hits a ship!", True, BLACK)
+            f"{player} hits a ship!", True, BLACK)
         sink_sound.play()
     elif result == "miss":
         text = font.render(
-            f"Player {current_player} misses!", True, BLACK)
+            f"{player} misses!", True, BLACK)
         splash_sound.play()
     elif result == "invalid":
         text = font.render(
-            f"Player {current_player}, Invalid attack!", True, BLACK)
+            f"{player}, Invalid attack!", True, BLACK)
     screen.blit(text, (10, 10))
 
     pygame.display.update()
@@ -364,12 +370,12 @@ def check_win(game_state, current_player):
         draw_grid()
 
         for ship in player1_ships:
-            draw_ship(ship, 1)
+            draw_ship(ship, 1, False)
         for ship in player2_ships:
-            draw_ship(ship, 2)
+            draw_ship(ship, 2, False)
         font = pygame.font.Font(None, 36)
         text = font.render(
-            "Player 2 wins! Press any key to exit...", True, BLACK)
+            "Computer wins! Press any key to exit...", True, BLACK)
         win_sound.play()
         screen.blit(text, (10, 10))
         pygame.display.update()
@@ -385,7 +391,7 @@ def check_win(game_state, current_player):
             draw_ship(ship, 2, False)
         font = pygame.font.Font(None, 36)
         text = font.render(
-            "Player 1 wins! Press any key to exit...", True, BLACK)
+            "Player wins! Press any key to exit...", True, BLACK)
         win_sound.play()
         screen.blit(text, (10, 10))
         pygame.display.update()
@@ -405,10 +411,8 @@ while playing:
             row = mouse_y // (CELL_SIZE + MARGIN)
 
             # Attackera cellen
-            attack_result = attack_cell(current_player,
+            attack_result = attack_cell(1,
                                         game_state, player2_ships, row, column)
-
-            current_player = 3 - current_player
 
             # Datorns tur att köra, använd random för att slumpmässsigt välja attack koordinat
             font = pygame.font.Font(None, 24)
@@ -418,10 +422,10 @@ while playing:
             pygame.display.update()
             pygame.time.wait(1200)
 
-            row = random.randint(0, ROWS - 1)
-            column = random.randint(0, COLUMNS - 1)
+            #row = random.randint(0, ROWS - 1)
+            #column = random.randint(0, COLUMNS - 1)
             attack_result = attack_cell(
-                current_player, game_state, player1_ships, row, column)
+                2, game_state, player1_ships, row, column)
             print(attack_result, [row, column])
 
             # Kontrollera om någon har vunnit
